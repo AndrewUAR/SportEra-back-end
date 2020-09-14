@@ -1,7 +1,7 @@
 package com.sportera.sportera.services;
 
 import com.sportera.sportera.models.User;
-import com.sportera.sportera.repository.UserRepository;
+import com.sportera.sportera.repositories.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
