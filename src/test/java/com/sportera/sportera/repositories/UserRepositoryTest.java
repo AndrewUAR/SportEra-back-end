@@ -1,7 +1,7 @@
-package com.sportera.sportera;
+package com.sportera.sportera.repositories;
 
+import com.sportera.sportera.TestUtil;
 import com.sportera.sportera.models.User;
-import com.sportera.sportera.repositories.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +26,12 @@ public class UserRepositoryTest {
     @BeforeEach
     public void cleanUp() {
         userRepository.deleteAll();
+    }
+
+    @Test
+    public void injectedComponentsAreNotNull() {
+        assertThat(testEntityManager).isNotNull();
+        assertThat(userRepository).isNotNull();
     }
 
     @Test
@@ -61,6 +67,18 @@ public class UserRepositoryTest {
     }
 
     @Test
+    public void should_find_user_by_id() {
+        User user1 = TestUtil.createValidUser();
+        testEntityManager.persist(user1);
+
+        User user2 = TestUtil.createValidUser2();
+        testEntityManager.persist(user2);
+
+        User foundUser = userRepository.findById(user2.getId()).get();
+        assertThat(foundUser).isEqualTo(user2);
+    }
+
+    @Test
     public void findByEmail_whereUserExists_returnsUser() {
 
         testEntityManager.persist(TestUtil.createValidUser());
@@ -73,5 +91,58 @@ public class UserRepositoryTest {
     public void findByEmail_whereUserDoesNotExist_returnsNull() {
         User inDB = userRepository.findByEmail("nonexistinguser@gmail.com");
         assertThat(inDB).isNull();
+    }
+
+    @Test
+    public void should_update_user_by_id() {
+        User user1 = TestUtil.createValidUser();
+        testEntityManager.persist(user1);
+
+        User user2 = TestUtil.createValidUser2();
+        testEntityManager.persist(user2);
+
+        User userToUpdate = userRepository.findById(user2.getId()).get();
+        userToUpdate.setFirstName("Updated firstName");
+        userToUpdate.setLastName("Updated lastName");
+        userToUpdate.setEmail("updated@test.com");
+
+        userRepository.save(userToUpdate);
+
+        User checkUser = userRepository.findById(user2.getId()).get();
+
+        assertThat(checkUser.getId()).isEqualTo(user2.getId());
+        assertThat(checkUser.getFirstName()).isEqualTo(userToUpdate.getFirstName());
+        assertThat(checkUser.getLastName()).isEqualTo(userToUpdate.getLastName());
+        assertThat(checkUser.getEmail()).isEqualTo(userToUpdate.getEmail());
+    }
+
+    @Test
+    public void should_delete_user_by_id() {
+        User user1 = TestUtil.createValidUser();
+        testEntityManager.persist(user1);
+
+        User user2 = TestUtil.createValidUser2();
+        testEntityManager.persist(user2);
+
+        User user3 = TestUtil.createValidUser3();
+        testEntityManager.persist(user3);
+
+        userRepository.deleteById(user2.getId());
+
+        Iterable<User> users = userRepository.findAll();
+
+        assertThat(users).hasSize(2).contains(user1, user3);
+    }
+
+    @Test
+    public void should_delete_all_users() {
+        User user1 = TestUtil.createValidUser();
+        testEntityManager.persist(user1);
+
+        User user2 = TestUtil.createValidUser2();
+        testEntityManager.persist(user2);
+
+        userRepository.deleteAll();
+        assertThat(userRepository.findAll()).isEmpty();
     }
 }

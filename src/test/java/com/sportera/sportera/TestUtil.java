@@ -1,6 +1,7 @@
 package com.sportera.sportera;
 
 import com.sportera.sportera.models.User;
+import org.springframework.mail.SimpleMailMessage;
 
 public class TestUtil {
 
@@ -30,5 +31,15 @@ public class TestUtil {
         user.setPassword("P4ssword");
         return user;
     }
+
+    public static SimpleMailMessage createMailMessage(String message) {
+        SimpleMailMessage mailMessage = new SimpleMailMessage();
+        mailMessage.setTo("recipient@mailsac.com");
+        mailMessage.setText(message);
+        mailMessage.setSubject("Testing");
+        mailMessage.setFrom("mysporteraua@gmail.com");
+        return mailMessage;
+    }
+
 }
 

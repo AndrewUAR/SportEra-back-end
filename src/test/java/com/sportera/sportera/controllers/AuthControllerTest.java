@@ -1,9 +1,10 @@
 package com.sportera.sportera.controllers;
 
 import com.sportera.sportera.TestUtil;
-import com.sportera.sportera.error.ApiError;
+import com.sportera.sportera.errors.ApiError;
 import com.sportera.sportera.models.User;
 import com.sportera.sportera.repositories.UserRepository;
+import com.sportera.sportera.services.UserService;
 import com.sportera.sportera.shared.GenericResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.support.BasicAuthenticationInterceptor;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
@@ -27,20 +29,37 @@ public class AuthControllerTest {
 
     private static final String API_1_0_SIGNUP = "/api/1.0/signup";
 
+    private static final String API_1_0_SIGNIN = "/api/1.0/signin";
+
     @Autowired
     TestRestTemplate testRestTemplate;
 
     @Autowired
     UserRepository userRepository;
 
+    @Autowired
+    UserService userService;
 
     @AfterEach
     public void cleanUp() {
         userRepository.deleteAll();
+        testRestTemplate.getRestTemplate().getInterceptors().clear();
     }
+
 
     public <T> ResponseEntity<T> postSignup(Object request, Class<T> response) {
         return testRestTemplate.postForEntity(API_1_0_SIGNUP, request, response);
+    }
+
+    public <T> ResponseEntity<T> signIn(Class<T> responseType) {
+        return testRestTemplate.postForEntity(API_1_0_SIGNIN, null, responseType);
+    }
+
+    @Test
+    public void injectedComponentsAreNotNull() {
+        assertThat(testRestTemplate).isNotNull();
+        assertThat(userRepository).isNotNull();
+        assertThat(userService).isNotNull();
     }
 
     @Test
@@ -292,5 +311,44 @@ public class AuthControllerTest {
         Map<String, String> validationErrors = response.getBody().getValidationErrors();
         assertThat(validationErrors.get("email")).isEqualTo("This email is in use");
     }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////LOGIN FUNCTIONALITY/////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private void authenticate() {
+        testRestTemplate.getRestTemplate().getInterceptors().add(new BasicAuthenticationInterceptor("test@gmail.com", "P4ssword"));
+    }
+
+    @Test void postLogin_withoutUserCredentials_receiveUnauthorized() {
+        ResponseEntity<Object> response = signIn(Object.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test void postLogin_withIncorrectUserCredentials_receiveUnauthorized() {
+        authenticate();
+        ResponseEntity<Object> response = signIn(Object.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test void postLogin_withoutUserCredentials_receiveApiError() {
+        ResponseEntity<String> response = signIn(String.class);
+        assertThat(response.getBody().contains("validationErrors")).isFalse();
+    }
+
+    @Test void postLogin_withoutUserCredentials_receiveUnauthorizedWithoutWWWAuthenticateHeader() {
+        authenticate();
+        ResponseEntity<String> response = signIn(String.class);
+        assertThat(response.getHeaders().containsKey("WWW-Authenticate")).isFalse();
+    }
+
+    @Test
+    public void postLogin_withValidCredentials_receiveOk() {
+        userService.save(TestUtil.createValidUser());
+        authenticate();
+        ResponseEntity<Object> response = signIn(Object.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
 
 }

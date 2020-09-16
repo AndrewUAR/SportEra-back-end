@@ -1,4 +1,4 @@
-package com.sportera.sportera.error;
+package com.sportera.sportera.errors;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;

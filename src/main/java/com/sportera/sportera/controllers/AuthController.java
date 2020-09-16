@@ -1,6 +1,6 @@
 package com.sportera.sportera.controllers;
 
-import com.sportera.sportera.error.ApiError;
+import com.sportera.sportera.errors.ApiError;
 import com.sportera.sportera.models.ConfirmationToken;
 import com.sportera.sportera.models.User;
 import com.sportera.sportera.repositories.ConfirmationTokenRepository;
@@ -11,6 +11,7 @@ import com.sportera.sportera.shared.GenericResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -37,6 +38,7 @@ public class  AuthController {
     @Autowired
     private EmailSenderService emailSenderService;
 
+
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
 
@@ -57,16 +59,23 @@ public class  AuthController {
 
         System.out.println(confirmationTokenRepository.save(confirmationToken));
 
-//        SimpleMailMessage mailMessage = new SimpleMailMessage();
-//        mailMessage.setTo(user.getEmail());
-//        mailMessage.setSubject("Complete Registration!");
-//        mailMessage.setFrom("no-repply@sportera.com");
-//        mailMessage.setText("To confirm your account, please click here : "
-//                +"http://localhost:8082/confirm-account?token="+confirmationToken.getConfirmationToken());
-//
-//        emailSenderService.sendEmail(mailMessage);
+        SimpleMailMessage mailMessage = new SimpleMailMessage();
+        mailMessage.setTo(user.getEmail());
+        mailMessage.setSubject("Complete Registration!");
+        mailMessage.setFrom("no-repply@sportera.com");
+        mailMessage.setText("To confirm your account, please click here : "
+                +"http://localhost:8082/confirm-account?token="+confirmationToken.getConfirmationToken());
+
+        emailSenderService.sendEmail(mailMessage);
 
         return ResponseEntity.ok(new GenericResponse("User saved"));
+    }
+
+    @PostMapping("/signin")
+    void loginUser() {
+
+//        Authentication authentication = authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(user.getEmail(), user.getPassword()));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class})

@@ -1,6 +1,7 @@
 package com.sportera.sportera.models;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -8,6 +9,7 @@ import java.util.UUID;
 
 @Data
 @Entity
+@NoArgsConstructor
 @Table( name = "confirmation_tokens")
 public class ConfirmationToken {
 
