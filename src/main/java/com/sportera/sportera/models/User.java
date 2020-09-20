@@ -1,6 +1,7 @@
 package com.sportera.sportera.models;
 
 import com.sportera.sportera.helpers.UniqueEmail;
+import com.sportera.sportera.helpers.UniqueUsername;
 import lombok.Data;
 
 import javax.persistence.*;
@@ -14,23 +15,23 @@ import java.util.Set;
 @Data
 @Entity
 @Table(	name = "users",
-        uniqueConstraints = @UniqueConstraint(columnNames = "email")
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "username"),
+                @UniqueConstraint(columnNames = "email")
+        }
       )
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(nullable = false, updatable = false)
     private long id;
 
-    @NotNull(message = "{sportera.constraints.firstName.NotNull.message}")
+    @NotNull(message = "{sportera.constraints.username.NotNull.message}")
     @Size(min = 4, max = 25)
-    @Column(name="first_name")
-    private String firstName;
-
-    @NotNull(message = "{sportera.constraints.lastName.NotNull.message}")
-    @Size(min = 4, max = 25)
-    @Column(name="last_name")
-    private String lastName;
+    @UniqueUsername
+    @Column(name="username")
+    private String username;
 
     @NotNull(message = "{sportera.constraints.email.NotNull.message}")
     @Size(max = 255)

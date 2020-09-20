@@ -3,9 +3,11 @@ package com.sportera.sportera.controllers;
 import com.sportera.sportera.TestUtil;
 import com.sportera.sportera.errors.ApiError;
 import com.sportera.sportera.models.User;
+import com.sportera.sportera.payloads.response.JwtResponse;
 import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.services.UserService;
 import com.sportera.sportera.shared.GenericResponse;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.support.BasicAuthenticationInterceptor;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
@@ -40,6 +42,9 @@ public class AuthControllerTest {
     @Autowired
     UserService userService;
 
+    @Autowired
+    AuthenticationManager authenticationManager;
+
     @AfterEach
     public void cleanUp() {
         userRepository.deleteAll();
@@ -49,10 +54,6 @@ public class AuthControllerTest {
 
     public <T> ResponseEntity<T> postSignup(Object request, Class<T> response) {
         return testRestTemplate.postForEntity(API_1_0_SIGNUP, request, response);
-    }
-
-    public <T> ResponseEntity<T> signIn(Class<T> responseType) {
-        return testRestTemplate.postForEntity(API_1_0_SIGNIN, null, responseType);
     }
 
     @Test
@@ -93,17 +94,9 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void postUser_whenUserHasNullFirstName_receiveBadRequest() {
+    public void postUser_whenUserHasNullUsername_receiveBadRequest() {
         User user = TestUtil.createValidUser();
-        user.setFirstName(null);
-        ResponseEntity<Object> response = postSignup(user, Object.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    @Test
-    public void postUser_whenUserHasNullLastName_receiveBadRequest() {
-        User user = TestUtil.createValidUser();
-        user.setLastName(null);
+        user.setUsername(null);
         ResponseEntity<Object> response = postSignup(user, Object.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -125,35 +118,18 @@ public class AuthControllerTest {
     }
 
     @Test
-    public void postUser_whenUserHasFirstNameLessThanRequired_receiveBadRequest() {
+    public void postUser_whenUserHasUsernameLessThanRequired_receiveBadRequest() {
         User user = TestUtil.createValidUser();
-        user.setFirstName("abc");
+        user.setUsername("abc");
         ResponseEntity<Object> response = postSignup(user, Object.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
-    public void postUser_whenUserHasLastNameLessThanRequired_receiveBadRequest() {
-        User user = TestUtil.createValidUser();
-        user.setLastName("abc");
-        ResponseEntity<Object> response = postSignup(user, Object.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    @Test
-    public void postUser_whenUserHasFirstNameExceedsTheLengthLimit_receiveBadRequest() {
+    public void postUser_whenUserHasUsernameExceedsTheLengthLimit_receiveBadRequest() {
         User user = TestUtil.createValidUser();
         String valueOf256Chars = IntStream.rangeClosed(1,26).mapToObj(x -> "a").collect(Collectors.joining());
-        user.setFirstName(valueOf256Chars);
-        ResponseEntity<Object> response = postSignup(user, Object.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    @Test
-    public void postUser_whenUserHasLastNameExceedsTheLengthLimit_receiveBadRequest() {
-        User user = TestUtil.createValidUser();
-        String valueOf256Chars = IntStream.rangeClosed(1,26).mapToObj(x -> "a").collect(Collectors.joining());
-        user.setLastName(valueOf256Chars);
+        user.setUsername(valueOf256Chars);
         ResponseEntity<Object> response = postSignup(user, Object.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -219,7 +195,7 @@ public class AuthControllerTest {
     @Test
     public void postUser_whenUserIsInvalid_receiveApiError() {
         User user = new User();
-        user.setFirstName(null);
+        user.setUsername(null);
         ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
         assertThat(response.getBody().getUrl()).isEqualTo(API_1_0_SIGNUP);
     }
@@ -227,27 +203,18 @@ public class AuthControllerTest {
     @Test
     public void postUser_whenUserIsInvalid_receiveApiErrorWithValidationErrors() {
         User user = new User();
-        user.setFirstName(null);
+        user.setUsername(null);
         ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
-        assertThat(response.getBody().getValidationErrors().size()).isEqualTo(4);
+        assertThat(response.getBody().getValidationErrors().size()).isEqualTo(3);
     }
 
     @Test
     public void postUser_whenUserHasNullFirstName_receiveMessageOfNullErrorForFirstName() {
         User user = new User();
-        user.setFirstName(null);
+        user.setUsername(null);
         ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
         Map<String, String> validationErrors = response.getBody().getValidationErrors();
-        assertThat(validationErrors.get("firstName")).isEqualTo("First Name cannot be null");
-    }
-
-    @Test
-    public void postUser_whenUserHasNullLastName_receiveMessageOfNullErrorForFirstName() {
-        User user = new User();
-        user.setLastName(null);
-        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
-        Map<String, String> validationErrors = response.getBody().getValidationErrors();
-        assertThat(validationErrors.get("lastName")).isEqualTo("Last Name cannot be null");
+        assertThat(validationErrors.get("username")).isEqualTo("Username cannot be null");
     }
 
     @Test
@@ -271,19 +238,10 @@ public class AuthControllerTest {
     @Test
     public void postUser_whenUserHasInvalidLengthFirstName_receiveMessageOfSizeError() {
         User user = new User();
-        user.setFirstName("abc");
+        user.setUsername("abc");
         ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
         Map<String, String> validationErrors = response.getBody().getValidationErrors();
-        assertThat(validationErrors.get("firstName")).isEqualTo("It must have minimum 4 and maximum 25 characters");
-    }
-
-    @Test
-    public void postUser_whenUserHasInvalidLengthLastName_receiveMessageOfSizeError() {
-        User user = new User();
-        user.setLastName("abc");
-        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
-        Map<String, String> validationErrors = response.getBody().getValidationErrors();
-        assertThat(validationErrors.get("lastName")).isEqualTo("It must have minimum 4 and maximum 25 characters");
+        assertThat(validationErrors.get("username")).isEqualTo("It must have minimum 4 and maximum 25 characters");
     }
 
     @Test
@@ -304,6 +262,15 @@ public class AuthControllerTest {
     }
 
     @Test
+    public void postUser_whenAnotherUserHasSameUsername_receiveMessageOfDuplicateUsername() {
+        userRepository.save(TestUtil.createValidUser());
+        User user = TestUtil.createValidUser();
+        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
+        Map<String, String> validationErrors = response.getBody().getValidationErrors();
+        assertThat(validationErrors.get("username")).isEqualTo("This username is already taken");
+    }
+
+    @Test
     public void postUser_whenAnotherUserHasSameEmail_receiveMessageOfDuplicateEmail() {
         userRepository.save(TestUtil.createValidUser());
         User user = TestUtil.createValidUser();
@@ -316,39 +283,129 @@ public class AuthControllerTest {
 ///////////////////////////////////////LOGIN FUNCTIONALITY/////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private void authenticate() {
-        testRestTemplate.getRestTemplate().getInterceptors().add(new BasicAuthenticationInterceptor("test@gmail.com", "P4ssword"));
+    public <T> ResponseEntity<T> signIn(Class<T> responseType) {
+        JSONObject emptyJsonObject = new JSONObject();
+        return testRestTemplate.postForEntity(API_1_0_SIGNIN, emptyJsonObject, responseType);
     }
 
-    @Test void postLogin_withoutUserCredentials_receiveUnauthorized() {
+    private ResponseEntity<JwtResponse> authenticate(User user) {
+        ResponseEntity<JwtResponse> response = testRestTemplate.postForEntity("/api/1.0/signin", user, JwtResponse.class);
+        return response;
+    }
+
+    @Test
+    public void postLogin_withoutUserCredentials_receiveUnauthorized() {
         ResponseEntity<Object> response = signIn(Object.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
-    @Test void postLogin_withIncorrectUserCredentials_receiveUnauthorized() {
-        authenticate();
-        ResponseEntity<Object> response = signIn(Object.class);
+    @Test
+    public void postLogin_withIncorrectUserCredentials_receiveUnauthorized() {
+        userService.save(TestUtil.createValidUser3());
+        User user = new User();
+        user.setUsername("test-user3");
+        user.setEmail("test3@gmail.com");
+        ResponseEntity<JwtResponse> response = authenticate(user);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
-    @Test void postLogin_withoutUserCredentials_receiveApiError() {
+    @Test
+    public void postLogin_withoutUserCredentials_receiveApiError() {
         ResponseEntity<String> response = signIn(String.class);
         assertThat(response.getBody().contains("validationErrors")).isFalse();
     }
 
-    @Test void postLogin_withoutUserCredentials_receiveUnauthorizedWithoutWWWAuthenticateHeader() {
-        authenticate();
-        ResponseEntity<String> response = signIn(String.class);
+    @Test
+    public void postLogin_withoutUserCredentials_receiveUnauthorizedWithoutWWWAuthenticateHeader() {
+        User user = new User();
+        ResponseEntity<JwtResponse> response = authenticate(user);
         assertThat(response.getHeaders().containsKey("WWW-Authenticate")).isFalse();
     }
 
     @Test
+    public void postLogin_whenUserAccountIsNotActive_receiveUnauthorized() {
+        userService.save(TestUtil.createValidUser2());
+        User user = new User();
+        user.setUsername("test-user");
+        user.setEmail("test2@gmail.com");
+        ResponseEntity<JwtResponse> response = authenticate(user);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     public void postLogin_withValidCredentials_receiveOk() {
-        userService.save(TestUtil.createValidUser());
-        authenticate();
-        ResponseEntity<Object> response = signIn(Object.class);
+        userService.save(TestUtil.createValidUser3());
+        User user = TestUtil.createLoginUser();
+        ResponseEntity<JwtResponse> response = authenticate(user);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    public void postLogin_withValidCredentials_receiveLoggedInUserId() {
+        User inDB = userService.save(TestUtil.createValidUser3());
+        User loggingUser = TestUtil.createLoginUser();
+        authenticate(loggingUser);
+        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+        JwtResponse body = response.getBody();
+        Integer id = body.getId().intValue();
+        assertThat(id).isEqualTo(inDB.getId());
+    }
 
+    @Test
+    public void postLogin_withValidCredentials_receiveLoggedInActiveUser() {
+        User inDB = userService.save(TestUtil.createValidUser3());
+        User loggingUser = TestUtil.createLoginUser();
+        authenticate(loggingUser);
+        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+        JwtResponse body = response.getBody();
+        Boolean isActive = body.getIsActive();
+        assertThat(isActive).isTrue();
+    }
+
+    @Test
+    public void postLogin_withValidCredentials_receiveLoggedInUserEmail() {
+        User inDB = userService.save(TestUtil.createValidUser3());
+        User loggingUser = TestUtil.createLoginUser();
+        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+        JwtResponse body = response.getBody();
+        String email = body.getEmail();
+        assertThat(email).isEqualTo(inDB.getEmail());
+    }
+
+    @Test
+    public void postLogin_withValidCredentials_receiveLoggedInUsersUsername() {
+        User inDB = userService.save(TestUtil.createValidUser3());
+        User loggingUser = TestUtil.createLoginUser();
+        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+        JwtResponse body = response.getBody();
+        String username = body.getUsername();
+        assertThat(username).isEqualTo(inDB.getUsername());
+    }
+
+    @Test
+    public void postLogin_withValidCredentials_notReceiveLoggedInUsersPassword() {
+        User inDB = userService.save(TestUtil.createValidUser3());
+        User loggingUser = TestUtil.createLoginUser();
+        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+        JwtResponse body = response.getBody();
+        assertThat(body).hasFieldOrProperty("password");
+    }
+
+    @Test
+    public void postLogin_withValidCredentials_receiveLoggedInJwtToken() {
+        User inDB = userService.save(TestUtil.createValidUser3());
+        User loggingUser = TestUtil.createLoginUser();
+        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+        JwtResponse body = response.getBody();
+        assertThat(body.getAccessToken()).isNotNull();
+    }
+
+    @Test
+    public void postLogin_withValidCredentials_receiveLoggedInJwtTokenWithCorrectTokenType() {
+        User inDB = userService.save(TestUtil.createValidUser3());
+        User loggingUser = TestUtil.createLoginUser();
+        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+        JwtResponse body = response.getBody();
+        assertThat(body.getTokenType()).isEqualTo("Bearer");
+    }
 }

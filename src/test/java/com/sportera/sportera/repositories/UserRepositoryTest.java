@@ -44,8 +44,7 @@ public class UserRepositoryTest {
     public void should_store_a_user() {
         User user = userRepository.save(TestUtil.createValidUser());
 
-        assertThat(user).hasFieldOrPropertyWithValue("firstName", "test-user");
-        assertThat(user).hasFieldOrPropertyWithValue("lastName", "test-user");
+        assertThat(user).hasFieldOrPropertyWithValue("username", "test-user");
         assertThat(user).hasFieldOrPropertyWithValue("email", "test@gmail.com");
         assertThat(user).hasFieldOrPropertyWithValue("password", "P4ssword");
         assertThat(user).hasFieldOrPropertyWithValue("isActive", false);
@@ -102,8 +101,7 @@ public class UserRepositoryTest {
         testEntityManager.persist(user2);
 
         User userToUpdate = userRepository.findById(user2.getId()).get();
-        userToUpdate.setFirstName("Updated firstName");
-        userToUpdate.setLastName("Updated lastName");
+        userToUpdate.setUsername("Updated username");
         userToUpdate.setEmail("updated@test.com");
 
         userRepository.save(userToUpdate);
@@ -111,8 +109,7 @@ public class UserRepositoryTest {
         User checkUser = userRepository.findById(user2.getId()).get();
 
         assertThat(checkUser.getId()).isEqualTo(user2.getId());
-        assertThat(checkUser.getFirstName()).isEqualTo(userToUpdate.getFirstName());
-        assertThat(checkUser.getLastName()).isEqualTo(userToUpdate.getLastName());
+        assertThat(checkUser.getUsername()).isEqualTo(userToUpdate.getUsername());
         assertThat(checkUser.getEmail()).isEqualTo(userToUpdate.getEmail());
     }
 

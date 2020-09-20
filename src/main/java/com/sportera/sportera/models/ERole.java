@@ -1,4 +1,4 @@
-package com.sportera.sportera.helpers;
+package com.sportera.sportera.models;
 
 public enum ERole {
     ROLE_USER,

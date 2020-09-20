@@ -1,6 +1,5 @@
 package com.sportera.sportera.models;
 
-import com.sportera.sportera.helpers.ERole;
 import lombok.Data;
 
 import javax.persistence.*;
