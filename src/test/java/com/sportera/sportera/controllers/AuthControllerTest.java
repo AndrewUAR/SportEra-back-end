@@ -350,16 +350,16 @@ public class AuthControllerTest {
         assertThat(id).isEqualTo(inDB.getId());
     }
 
-    @Test
-    public void postLogin_withValidCredentials_receiveLoggedInActiveUser() {
-        User inDB = userService.save(TestUtil.createValidUser3());
-        User loggingUser = TestUtil.createLoginUser();
-        authenticate(loggingUser);
-        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
-        LoginResponse body = response.getBody();
-        Boolean isActive = body.getIsActive();
-        assertThat(isActive).isTrue();
-    }
+//    @Test
+//    public void postLogin_withValidCredentials_receiveLoggedInActiveUser() {
+//        User inDB = userService.save(TestUtil.createValidUser3());
+//        User loggingUser = TestUtil.createLoginUser();
+//        authenticate(loggingUser);
+//        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
+//        LoginResponse body = response.getBody();
+//        Boolean isActive = body.getIsActive();
+//        assertThat(isActive).isTrue();
+//    }
 
     @Test
     public void postLogin_withValidCredentials_receiveLoggedInUserEmail() {

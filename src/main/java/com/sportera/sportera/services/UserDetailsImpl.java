@@ -43,6 +43,7 @@ public class UserDetailsImpl implements UserDetails {
         this.email = email;
         this.password = password;
         this.isActive = isActive;
+        this.isNotLocked = isNotLocked;
         this.authorities = authorities;
     }
 
@@ -73,7 +74,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return this.isNotLocked;
     }
 
     @Override
@@ -83,7 +84,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.isActive;
     }
 
 }

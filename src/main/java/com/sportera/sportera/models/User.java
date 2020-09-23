@@ -49,11 +49,11 @@ public class User {
     @Column(name="password")
     private String password;
 
-    @Column(nullable = false, name="is_active", columnDefinition = "boolean default true")
-    private boolean isActive;
+    @Column(nullable = false, name="is_active")
+    private boolean isActive = true;
 
-    @Column(nullable = false, name="is_not_locked", columnDefinition = "boolean default true")
-    private boolean isNotLocked;
+    @Column(nullable = false, name="is_not_locked")
+    private boolean isNotLocked = true;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(	name = "user_roles",

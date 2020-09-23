@@ -98,12 +98,11 @@ public class  AuthController {
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
-                userDetails.getIsActive(),
                 roles);
 
 
 
-        Cookie cookie = new Cookie("jw", jwt);
+        Cookie cookie = new Cookie("jwt", jwt);
         response.addCookie(cookie);
 
 
