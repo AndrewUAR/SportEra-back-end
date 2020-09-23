@@ -7,6 +7,7 @@ import com.sportera.sportera.payloads.request.LoginRequest;
 import com.sportera.sportera.payloads.request.SignupRequest;
 import com.sportera.sportera.payloads.response.LoginResponse;
 import com.sportera.sportera.repositories.ConfirmationTokenRepository;
+import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.security.jwt.JwtUtils;
 import com.sportera.sportera.services.EmailSenderService;
 import com.sportera.sportera.services.UserDetailsImpl;
@@ -44,6 +45,9 @@ public class  AuthController {
     UserService userService;
 
     @Autowired
+    UserRepository userRepository;
+
+    @Autowired
     ConfirmationTokenRepository confirmationTokenRepository;
 
     @Autowired
@@ -74,7 +78,7 @@ public class  AuthController {
         mailMessage.setSubject("Complete Registration!");
         mailMessage.setFrom("no-repply@sportera.com");
         mailMessage.setText("To confirm your account, please click here : "
-                +"http://localhost:8082/confirm-account?token="+confirmationToken.getConfirmationToken());
+                +"http://localhost:8080/api/1.0/auth/confirm-account?token="+confirmationToken.getConfirmationToken());
 
         emailSenderService.sendEmail(mailMessage);
 
@@ -107,6 +111,18 @@ public class  AuthController {
 
 
         return ResponseEntity.ok(res);
+    }
+
+    @RequestMapping(value="/confirm-account", method={RequestMethod.GET, RequestMethod.POST})
+    ResponseEntity<?> confirmUserAccount(@RequestParam("token") String confirmationToken) {
+        ConfirmationToken token = confirmationTokenRepository.findByConfirmationToken(confirmationToken);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid link");
+        }
+        User user = userRepository.findByEmailIgnoreCase(token.getUser().getEmail());
+        user.setActive(true);
+        userRepository.save(user);
+        return ResponseEntity.ok(new GenericResponse("Account was successfully activated!"));
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class})

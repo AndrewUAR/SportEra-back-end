@@ -82,13 +82,13 @@ public class UserRepositoryTest {
 
         testEntityManager.persist(TestUtil.createValidUser());
 
-        User inDB = userRepository.findByEmail("test@gmail.com");
+        User inDB = userRepository.findByEmailIgnoreCase("test@gmail.com");
         assertThat(inDB).isNotNull();
     }
 
     @Test
     public void findByEmail_whereUserDoesNotExist_returnsNull() {
-        User inDB = userRepository.findByEmail("nonexistinguser@gmail.com");
+        User inDB = userRepository.findByEmailIgnoreCase("nonexistinguser@gmail.com");
         assertThat(inDB).isNull();
     }
 
