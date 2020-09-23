@@ -32,7 +32,6 @@ public class TestUtil {
         user.setUsername("test-user3");
         user.setEmail("test3@gmail.com");
         user.setPassword("P4ssword");
-        user.setActive(true);
         return user;
     }
 

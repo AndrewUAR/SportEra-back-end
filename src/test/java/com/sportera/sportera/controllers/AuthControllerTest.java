@@ -3,7 +3,7 @@ package com.sportera.sportera.controllers;
 import com.sportera.sportera.TestUtil;
 import com.sportera.sportera.errors.ApiError;
 import com.sportera.sportera.models.User;
-import com.sportera.sportera.payloads.response.JwtResponse;
+import com.sportera.sportera.payloads.response.LoginResponse;
 import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.services.UserService;
 import com.sportera.sportera.shared.GenericResponse;
@@ -29,9 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 public class AuthControllerTest {
 
-    private static final String API_1_0_SIGNUP = "/api/1.0/signup";
+    private static final String API_1_0_SIGNUP = "/api/1.0/auth/signup";
 
-    private static final String API_1_0_SIGNIN = "/api/1.0/signin";
+    private static final String API_1_0_SIGNIN = "/api/1.0/auth/signin";
 
     @Autowired
     TestRestTemplate testRestTemplate;
@@ -288,9 +288,8 @@ public class AuthControllerTest {
         return testRestTemplate.postForEntity(API_1_0_SIGNIN, emptyJsonObject, responseType);
     }
 
-    private ResponseEntity<JwtResponse> authenticate(User user) {
-        ResponseEntity<JwtResponse> response = testRestTemplate.postForEntity("/api/1.0/signin", user, JwtResponse.class);
-        return response;
+    private ResponseEntity<LoginResponse> authenticate(User user) {
+        return testRestTemplate.postForEntity(API_1_0_SIGNIN, user, LoginResponse.class);
     }
 
     @Test
@@ -304,8 +303,8 @@ public class AuthControllerTest {
         userService.save(TestUtil.createValidUser3());
         User user = new User();
         user.setUsername("test-user3");
-        user.setEmail("test3@gmail.com");
-        ResponseEntity<JwtResponse> response = authenticate(user);
+        user.setPassword("P4sswordd");
+        ResponseEntity<LoginResponse> response = authenticate(user);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -318,7 +317,7 @@ public class AuthControllerTest {
     @Test
     public void postLogin_withoutUserCredentials_receiveUnauthorizedWithoutWWWAuthenticateHeader() {
         User user = new User();
-        ResponseEntity<JwtResponse> response = authenticate(user);
+        ResponseEntity<LoginResponse> response = authenticate(user);
         assertThat(response.getHeaders().containsKey("WWW-Authenticate")).isFalse();
     }
 
@@ -328,7 +327,7 @@ public class AuthControllerTest {
         User user = new User();
         user.setUsername("test-user");
         user.setEmail("test2@gmail.com");
-        ResponseEntity<JwtResponse> response = authenticate(user);
+        ResponseEntity<LoginResponse> response = authenticate(user);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -336,7 +335,7 @@ public class AuthControllerTest {
     public void postLogin_withValidCredentials_receiveOk() {
         userService.save(TestUtil.createValidUser3());
         User user = TestUtil.createLoginUser();
-        ResponseEntity<JwtResponse> response = authenticate(user);
+        ResponseEntity<LoginResponse> response = authenticate(user);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
@@ -345,8 +344,8 @@ public class AuthControllerTest {
         User inDB = userService.save(TestUtil.createValidUser3());
         User loggingUser = TestUtil.createLoginUser();
         authenticate(loggingUser);
-        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
-        JwtResponse body = response.getBody();
+        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
+        LoginResponse body = response.getBody();
         Integer id = body.getId().intValue();
         assertThat(id).isEqualTo(inDB.getId());
     }
@@ -356,8 +355,8 @@ public class AuthControllerTest {
         User inDB = userService.save(TestUtil.createValidUser3());
         User loggingUser = TestUtil.createLoginUser();
         authenticate(loggingUser);
-        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
-        JwtResponse body = response.getBody();
+        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
+        LoginResponse body = response.getBody();
         Boolean isActive = body.getIsActive();
         assertThat(isActive).isTrue();
     }
@@ -366,8 +365,8 @@ public class AuthControllerTest {
     public void postLogin_withValidCredentials_receiveLoggedInUserEmail() {
         User inDB = userService.save(TestUtil.createValidUser3());
         User loggingUser = TestUtil.createLoginUser();
-        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
-        JwtResponse body = response.getBody();
+        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
+        LoginResponse body = response.getBody();
         String email = body.getEmail();
         assertThat(email).isEqualTo(inDB.getEmail());
     }
@@ -376,8 +375,8 @@ public class AuthControllerTest {
     public void postLogin_withValidCredentials_receiveLoggedInUsersUsername() {
         User inDB = userService.save(TestUtil.createValidUser3());
         User loggingUser = TestUtil.createLoginUser();
-        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
-        JwtResponse body = response.getBody();
+        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
+        LoginResponse body = response.getBody();
         String username = body.getUsername();
         assertThat(username).isEqualTo(inDB.getUsername());
     }
@@ -386,26 +385,26 @@ public class AuthControllerTest {
     public void postLogin_withValidCredentials_notReceiveLoggedInUsersPassword() {
         User inDB = userService.save(TestUtil.createValidUser3());
         User loggingUser = TestUtil.createLoginUser();
-        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
-        JwtResponse body = response.getBody();
-        assertThat(body).hasFieldOrProperty("password");
+        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
+        String body = response.getBody().toString();
+        assertThat(body).doesNotContain("password");
     }
 
-    @Test
-    public void postLogin_withValidCredentials_receiveLoggedInJwtToken() {
-        User inDB = userService.save(TestUtil.createValidUser3());
-        User loggingUser = TestUtil.createLoginUser();
-        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
-        JwtResponse body = response.getBody();
-        assertThat(body.getAccessToken()).isNotNull();
-    }
-
-    @Test
-    public void postLogin_withValidCredentials_receiveLoggedInJwtTokenWithCorrectTokenType() {
-        User inDB = userService.save(TestUtil.createValidUser3());
-        User loggingUser = TestUtil.createLoginUser();
-        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
-        JwtResponse body = response.getBody();
-        assertThat(body.getTokenType()).isEqualTo("Bearer");
-    }
+//    @Test
+//    public void postLogin_withValidCredentials_receiveLoggedInJwtToken() {
+//        User inDB = userService.save(TestUtil.createValidUser3());
+//        User loggingUser = TestUtil.createLoginUser();
+//        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+//        JwtResponse body = response.getBody();
+//        assertThat(body.getAccessToken()).isNotNull();
+//    }
+//
+//    @Test
+//    public void postLogin_withValidCredentials_receiveLoggedInJwtTokenWithCorrectTokenType() {
+//        User inDB = userService.save(TestUtil.createValidUser3());
+//        User loggingUser = TestUtil.createLoginUser();
+//        ResponseEntity<JwtResponse> response = authenticate(loggingUser);
+//        JwtResponse body = response.getBody();
+//        assertThat(body.getTokenType()).isEqualTo("Bearer");
+//    }
 }

@@ -3,9 +3,10 @@ package com.sportera.sportera.controllers;
 import com.sportera.sportera.errors.ApiError;
 import com.sportera.sportera.models.ConfirmationToken;
 import com.sportera.sportera.models.User;
-import com.sportera.sportera.payloads.response.JwtResponse;
+import com.sportera.sportera.payloads.request.LoginRequest;
+import com.sportera.sportera.payloads.request.SignupRequest;
+import com.sportera.sportera.payloads.response.LoginResponse;
 import com.sportera.sportera.repositories.ConfirmationTokenRepository;
-import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.security.jwt.JwtUtils;
 import com.sportera.sportera.services.EmailSenderService;
 import com.sportera.sportera.services.UserDetailsImpl;
@@ -18,13 +19,16 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
@@ -33,14 +37,11 @@ import java.util.stream.Collectors;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/api/1.0")
+@RequestMapping("/api/1.0/auth")
 public class  AuthController {
 
     @Autowired
     UserService userService;
-
-    @Autowired
-    UserRepository userRepository;
 
     @Autowired
     ConfirmationTokenRepository confirmationTokenRepository;
@@ -56,15 +57,20 @@ public class  AuthController {
 
 
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody User user) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
 
-        userService.save(user);
-        ConfirmationToken confirmationToken = new ConfirmationToken(user);
+        User user = new User();
+        user.setUsername(signupRequest.getUsername());
+        user.setEmail(signupRequest.getEmail());
+        user.setPassword(signupRequest.getPassword());
+
+        User savedUser = userService.save(user);
+        ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
 
         System.out.println(confirmationTokenRepository.save(confirmationToken));
 
         SimpleMailMessage mailMessage = new SimpleMailMessage();
-        mailMessage.setTo(user.getEmail());
+        mailMessage.setTo(savedUser.getEmail());
         mailMessage.setSubject("Complete Registration!");
         mailMessage.setFrom("no-repply@sportera.com");
         mailMessage.setText("To confirm your account, please click here : "
@@ -76,29 +82,32 @@ public class  AuthController {
     }
 
     @PostMapping("/signin")
-    ResponseEntity<?> loginUser(@RequestBody User user) {
-//        if (userRepository.existsByUsername(user.getUsername())
-//                && userRepository.findByUsername(user.getUsername()).isActive() == false) {
-//            System.out.println("In auth");
-//            return (ResponseEntity<?>) ResponseEntity.status(HttpStatus.UNAUTHORIZED);
-//        }
+    ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         List<String> roles = userDetails.getAuthorities().stream()
-                .map(item -> item.getAuthority())
+                .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new JwtResponse(jwt,
+        LoginResponse res = new LoginResponse(
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
                 userDetails.getIsActive(),
-                roles));
+                roles);
+
+
+
+        Cookie cookie = new Cookie("jw", jwt);
+        response.addCookie(cookie);
+
+
+        return ResponseEntity.ok(res);
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class})

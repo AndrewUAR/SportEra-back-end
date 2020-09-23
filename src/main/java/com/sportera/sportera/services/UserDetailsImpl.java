@@ -21,18 +21,22 @@ public class UserDetailsImpl implements UserDetails {
 
     private Long id;
 
+    private String user_id;
+
     private String username;
 
     private String email;
 
     private Boolean isActive;
 
+    private Boolean isNotLocked;
+
     @JsonIgnore
     private String password;
 
     private Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Long id, String username, String email, String password, Boolean isActive,
+    public UserDetailsImpl(Long id, String username, String email, String password, Boolean isActive, Boolean isNotLocked,
                            Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
@@ -53,6 +57,7 @@ public class UserDetailsImpl implements UserDetails {
                 user.getEmail(),
                 user.getPassword(),
                 user.isActive(),
+                user.isNotLocked(),
                 authorities);
     }
 
@@ -80,4 +85,5 @@ public class UserDetailsImpl implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
 }

@@ -27,6 +27,9 @@ public class User {
     @Column(nullable = false, updatable = false)
     private long id;
 
+    @Column(name="user_id")
+    private String userId;
+
     @NotNull(message = "{sportera.constraints.username.NotNull.message}")
     @Size(min = 4, max = 25)
     @UniqueUsername
@@ -46,8 +49,11 @@ public class User {
     @Column(name="password")
     private String password;
 
-    @Column(name="is_active")
+    @Column(nullable = false, name="is_active", columnDefinition = "boolean default true")
     private boolean isActive;
+
+    @Column(nullable = false, name="is_not_locked", columnDefinition = "boolean default true")
+    private boolean isNotLocked;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(	name = "user_roles",
