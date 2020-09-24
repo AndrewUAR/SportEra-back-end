@@ -2,11 +2,13 @@ package com.sportera.sportera.controllers;
 
 import com.sportera.sportera.errors.ApiError;
 import com.sportera.sportera.models.ConfirmationToken;
+import com.sportera.sportera.models.PasswordResetToken;
 import com.sportera.sportera.models.User;
 import com.sportera.sportera.payloads.request.LoginRequest;
 import com.sportera.sportera.payloads.request.SignupRequest;
 import com.sportera.sportera.payloads.response.LoginResponse;
 import com.sportera.sportera.repositories.ConfirmationTokenRepository;
+import com.sportera.sportera.repositories.PasswordTokenRepository;
 import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.security.jwt.JwtUtils;
 import com.sportera.sportera.services.EmailSenderService;
@@ -22,6 +24,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -51,10 +54,13 @@ public class  AuthController {
     ConfirmationTokenRepository confirmationTokenRepository;
 
     @Autowired
-    private EmailSenderService emailSenderService;
+    EmailSenderService emailSenderService;
 
     @Autowired
     AuthenticationManager authenticationManager;
+
+    @Autowired
+    PasswordTokenRepository passwordTokenRepository;
 
     @Autowired
     JwtUtils jwtUtils;
@@ -123,6 +129,17 @@ public class  AuthController {
         user.setActive(true);
         userRepository.save(user);
         return ResponseEntity.ok(new GenericResponse("Account was successfully activated!"));
+    }
+
+    @PostMapping("/reset-password")
+    ResponseEntity<?> resetPassword(@RequestBody @RequestParam("email") String email) {
+        User user = userRepository.findByEmailIgnoreCase(email);
+        if (user == null) {
+            throw new UsernameNotFoundException("User with this email doesn't exist");
+        }
+        PasswordResetToken passwordResetToken = new PasswordResetToken(user);
+        passwordTokenRepository.save(passwordResetToken);
+
     }
 
     @ExceptionHandler({MethodArgumentNotValidException.class})
