@@ -1,6 +1,8 @@
 package com.sportera.sportera.services;
 
+import com.sportera.sportera.models.PasswordResetToken;
 import com.sportera.sportera.models.User;
+import com.sportera.sportera.repositories.PasswordTokenRepository;
 import com.sportera.sportera.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -8,11 +10,16 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Calendar;
+
 @Service
 public class AuthUserService implements UserDetailsService {
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    PasswordTokenRepository passwordTokenRepository;
 
     @Autowired
     LoginAttemptService loginAttemptService;
@@ -38,6 +45,22 @@ public class AuthUserService implements UserDetailsService {
         } else {
             loginAttemptService.evictUserFromLoginAttemptCache(user.getUsername());
         }
+    }
+
+    public String validatePasswordResetToken(String token) {
+        final PasswordResetToken passwordResetToken = passwordTokenRepository.findByResetToken(token);
+        return !isTokenFound(passwordResetToken) ? "invalidToken"
+                : isTokenExpired(passwordResetToken) ? "expired"
+                : null;
+    }
+
+    private boolean isTokenFound(PasswordResetToken passwordToken) {
+        return passwordToken != null;
+    }
+
+    private boolean isTokenExpired(PasswordResetToken passwordToken) {
+        final Calendar calendar = Calendar.getInstance();
+        return passwordToken.getExpiryDate().before(calendar.getTime());
     }
 
 
