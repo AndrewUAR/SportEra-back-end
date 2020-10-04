@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+
 @RestController
 @RequestMapping("/api/1.0/auth")
 public class  AuthController {
@@ -109,6 +109,10 @@ public class  AuthController {
                 roles);
 
         Cookie cookie = new Cookie("jwt", jwt);
+        cookie.setMaxAge(7 * 24 * 60 * 60);
+        cookie.setSecure(false);
+        cookie.setHttpOnly(false);
+        cookie.setPath("/");
         response.addCookie(cookie);
         return ResponseEntity.ok(res);
     }
