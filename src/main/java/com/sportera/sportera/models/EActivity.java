@@ -13,6 +13,7 @@ public enum EActivity {
     RAFTING,
     ROLLER_SKATING,
     RUGBY,
+    RUNNING,
     SCUBA_DIVING,
     SKATEBOARDING,
     SKIING,
