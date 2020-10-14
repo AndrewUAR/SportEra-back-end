@@ -339,16 +339,16 @@ public class AuthControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
-    @Test
-    public void postLogin_withValidCredentials_receiveLoggedInUserId() {
-        User inDB = userService.save(TestUtil.createValidUser3());
-        User loggingUser = TestUtil.createLoginUser();
-        authenticate(loggingUser);
-        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
-        LoginResponse body = response.getBody();
-        Integer id = body.getId().intValue();
-        assertThat(id).isEqualTo(inDB.getId());
-    }
+//    @Test
+//    public void postLogin_withValidCredentials_receiveLoggedInUserId() {
+//        User inDB = userService.save(TestUtil.createValidUser3());
+//        User loggingUser = TestUtil.createLoginUser();
+//        authenticate(loggingUser);
+//        ResponseEntity<LoginResponse> response = authenticate(loggingUser);
+//        LoginResponse body = response.getBody();
+//        Integer id = body.getId().intValue();
+//        assertThat(id).isEqualTo(inDB.getId());
+//    }
 
 //    @Test
 //    public void postLogin_withValidCredentials_receiveLoggedInActiveUser() {

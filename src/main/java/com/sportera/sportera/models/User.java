@@ -11,6 +11,7 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 @Entity
@@ -27,8 +28,8 @@ public class User {
     @Column(nullable = false, updatable = false)
     private long id;
 
-    @Column(name="user_id")
-    private String userId;
+    @Column(name="string_id")
+    private String stringId;
 
     @NotNull(message = "{sportera.constraints.username.NotNull.message}")
     @Size(min = 4, max = 25)
@@ -60,5 +61,9 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+
+    public User() {
+        this.stringId = UUID.randomUUID().toString();
+    }
 
 }

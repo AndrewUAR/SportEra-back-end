@@ -10,6 +10,7 @@ import com.sportera.sportera.payloads.request.SignupRequest;
 import com.sportera.sportera.payloads.response.LoginResponse;
 import com.sportera.sportera.repositories.ConfirmationTokenRepository;
 import com.sportera.sportera.repositories.PasswordTokenRepository;
+import com.sportera.sportera.repositories.RoleRepository;
 import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.security.jwt.JwtUtils;
 import com.sportera.sportera.services.AuthUserService;
@@ -52,6 +53,9 @@ public class  AuthController {
 
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    RoleRepository roleRepository;
 
     @Autowired
     ConfirmationTokenRepository confirmationTokenRepository;
@@ -103,7 +107,6 @@ public class  AuthController {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
         LoginResponse res = new LoginResponse(
-                userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getEmail(),
                 roles);

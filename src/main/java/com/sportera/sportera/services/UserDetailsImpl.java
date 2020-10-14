@@ -64,7 +64,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return AuthorityUtils.createAuthorityList("Role_USER");
+        return AuthorityUtils.createAuthorityList("ROLE_USER");
     }
 
     @Override
