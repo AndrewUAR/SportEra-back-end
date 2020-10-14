@@ -1,9 +1,7 @@
 package com.sportera.sportera.controllers;
 
 import com.sportera.sportera.errors.ApiError;
-import com.sportera.sportera.models.ConfirmationToken;
-import com.sportera.sportera.models.PasswordResetToken;
-import com.sportera.sportera.models.User;
+import com.sportera.sportera.models.*;
 import com.sportera.sportera.payloads.request.LoginRequest;
 import com.sportera.sportera.payloads.request.PasswordResetRequest;
 import com.sportera.sportera.payloads.request.SignupRequest;
@@ -38,9 +36,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -85,6 +81,11 @@ public class  AuthController {
         user.setUsername(signupRequest.getUsername());
         user.setEmail(signupRequest.getEmail());
         user.setPassword(signupRequest.getPassword());
+        Set<Role> roles = new HashSet<>();
+        Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+        roles.add(userRole);
+        user.setRoles(roles);
         User savedUser = userService.save(user);
         ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
         confirmationTokenRepository.save(confirmationToken);
