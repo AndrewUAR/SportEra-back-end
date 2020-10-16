@@ -6,6 +6,8 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Entity
@@ -43,4 +45,10 @@ public class UserProfile {
     @OneToOne(targetEntity = User.class, fetch = FetchType.EAGER)
     @JoinColumn(nullable = false, name = "user_id")
     private User user;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "user_profile_activities",
+            joinColumns = @JoinColumn(name = "user_profile_id"),
+            inverseJoinColumns = @JoinColumn(name = "activity_id"))
+    private Set<Activity> activities = new HashSet<>();
 }
