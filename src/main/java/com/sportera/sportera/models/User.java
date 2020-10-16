@@ -56,7 +56,7 @@ public class User {
     @Column(nullable = false, name="is_not_locked")
     private boolean isNotLocked = true;
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(	name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
