@@ -5,7 +5,7 @@ import com.sportera.sportera.repositories.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import javax.validation.Valid;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -17,7 +17,8 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public User save(@Valid User user) {
+    public User save(User user) {
+        user.setStringId(UUID.randomUUID().toString());
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
