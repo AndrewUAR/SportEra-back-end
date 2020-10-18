@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -82,14 +83,15 @@ public class UserRepositoryTest {
 
         testEntityManager.persist(TestUtil.createValidUser());
 
-        User inDB = userRepository.findByEmailIgnoreCase("test@gmail.com");
+        User inDB = userRepository.findByEmailIgnoreCase("test@gmail.com")
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         assertThat(inDB).isNotNull();
     }
 
     @Test
     public void findByEmail_whereUserDoesNotExist_returnsNull() {
-        User inDB = userRepository.findByEmailIgnoreCase("nonexistinguser@gmail.com");
-        assertThat(inDB).isNull();
+        Boolean inDB = userRepository.existsByEmail("nonexistinguser@gmail.com");
+        assertThat(inDB).isTrue();
     }
 
     @Test

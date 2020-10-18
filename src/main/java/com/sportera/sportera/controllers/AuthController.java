@@ -7,14 +7,11 @@ import com.sportera.sportera.payloads.request.PasswordResetRequest;
 import com.sportera.sportera.payloads.request.SignupRequest;
 import com.sportera.sportera.payloads.response.LoginResponse;
 import com.sportera.sportera.repositories.ConfirmationTokenRepository;
-import com.sportera.sportera.repositories.PasswordTokenRepository;
+import com.sportera.sportera.repositories.PasswordResetTokenRepository;
 import com.sportera.sportera.repositories.RoleRepository;
 import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.security.jwt.JwtUtils;
-import com.sportera.sportera.services.AuthUserService;
-import com.sportera.sportera.services.EmailSenderService;
-import com.sportera.sportera.services.UserDetailsImpl;
-import com.sportera.sportera.services.UserService;
+import com.sportera.sportera.services.*;
 import com.sportera.sportera.shared.GenericResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,7 +23,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -57,6 +53,9 @@ public class  AuthController {
     ConfirmationTokenRepository confirmationTokenRepository;
 
     @Autowired
+    ConfirmationTokenService confirmationTokenService;
+
+    @Autowired
     EmailSenderService emailSenderService;
 
     @Autowired
@@ -66,10 +65,10 @@ public class  AuthController {
     AuthenticationManager authenticationManager;
 
     @Autowired
-    PasswordTokenRepository passwordTokenRepository;
+    PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
-    PasswordEncoder passwordEncoder;
+    PasswordResetTokenService passwordResetTokenService;
 
     @Autowired
     JwtUtils jwtUtils;
@@ -88,7 +87,7 @@ public class  AuthController {
         user.setRoles(roles);
         User savedUser = userService.save(user);
         ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
-        confirmationTokenRepository.save(confirmationToken);
+        confirmationTokenService.save(confirmationToken);
         SimpleMailMessage confirmationTokenMessage = emailSenderService
                 .constructConfirmationTokenEmail(confirmationToken.getConfirmationToken(), savedUser);
         emailSenderService.sendEmail(confirmationTokenMessage);
@@ -124,26 +123,20 @@ public class  AuthController {
 
     @RequestMapping(value="/confirm-account", method={RequestMethod.GET, RequestMethod.POST})
     ResponseEntity<?> confirmUserAccount(@RequestParam("token") String confirmationToken) {
-        ConfirmationToken token = confirmationTokenRepository.findByConfirmationToken(confirmationToken);
-        if (token == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid link");
-        }
-        User user = userRepository.findByEmailIgnoreCase(token.getUser().getEmail());
+        ConfirmationToken token = confirmationTokenRepository.findByConfirmationToken(confirmationToken).orElseThrow(() -> new RuntimeException("Invalid link"));
+        User user = userRepository.findByEmailIgnoreCase(token.getUser().getEmail()).orElseThrow(() -> new RuntimeException("User doesn't exist"));
         user.setActive(true);
         userRepository.save(user);
-        confirmationTokenRepository.delete(token);
+        confirmationTokenService.delete(token);
         return ResponseEntity.ok(new GenericResponse("Account was successfully activated!"));
     }
 
 
     @PostMapping("/forgot-password")
     ResponseEntity<?> forgotPassword(@RequestParam("email") String userEmail) {
-        User user = userRepository.findByEmailIgnoreCase(userEmail);
-        if (user == null) {
-            throw new UsernameNotFoundException("User with this email doesn't exist!");
-        }
+        User user = userRepository.findByEmailIgnoreCase(userEmail).orElseThrow(() -> new UsernameNotFoundException("User with this email doesn't exist!"));
         PasswordResetToken passwordResetToken = new PasswordResetToken(user);
-        passwordTokenRepository.save(passwordResetToken);
+        passwordResetTokenService.save(passwordResetToken);
         SimpleMailMessage resetPasswordTokenMessage = emailSenderService
                 .constructResetTokenEmail(passwordResetToken.getResetToken(), user);
         emailSenderService.sendEmail(resetPasswordTokenMessage);
@@ -156,13 +149,13 @@ public class  AuthController {
         if (result != null) {
             return ResponseEntity.ok(new GenericResponse("Reset token " + result));
         }
-        PasswordResetToken passwordResetToken = passwordTokenRepository.findByResetToken(token);
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByResetToken(token).orElseThrow(() -> new RuntimeException("Invalid reset token"));
         User user = passwordResetToken.getUser();
         if (user == null) {
             throw new UsernameNotFoundException("User was not found!");
         }
         userService.changeUserPassword(user, passwordResetRequest.getNewPassword());
-        passwordTokenRepository.delete(passwordResetToken);
+        passwordResetTokenService.delete(passwordResetToken);
         return ResponseEntity.ok(new GenericResponse("Password was successfully changed!"));
     }
 

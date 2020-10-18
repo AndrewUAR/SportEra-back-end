@@ -1,6 +1,5 @@
 package com.sportera.sportera.helpers;
 
-import com.sportera.sportera.models.User;
 import com.sportera.sportera.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -15,11 +14,7 @@ public class UniqueUsernameValidator implements ConstraintValidator<UniqueUserna
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
-        User inDB = userRepository.findByUsername(value);
-        if(inDB == null) {
-            return true;
-        }
-        return false;
+        return !userRepository.existsByUsername(value);
     }
 
 }

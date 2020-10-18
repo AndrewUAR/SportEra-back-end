@@ -2,7 +2,7 @@ package com.sportera.sportera.services;
 
 import com.sportera.sportera.models.PasswordResetToken;
 import com.sportera.sportera.models.User;
-import com.sportera.sportera.repositories.PasswordTokenRepository;
+import com.sportera.sportera.repositories.PasswordResetTokenRepository;
 import com.sportera.sportera.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,17 +19,14 @@ public class AuthUserService implements UserDetailsService {
     UserRepository userRepository;
 
     @Autowired
-    PasswordTokenRepository passwordTokenRepository;
+    PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
     LoginAttemptService loginAttemptService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username);
-        if (user == null) {
-            throw new UsernameNotFoundException("User not found");
-        }
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User is not found"));
         validateLoginAttempt(user);
         userRepository.save(user);
         return UserDetailsImpl.build(user);
@@ -48,7 +45,7 @@ public class AuthUserService implements UserDetailsService {
     }
 
     public String validatePasswordResetToken(String token) {
-        final PasswordResetToken passwordResetToken = passwordTokenRepository.findByResetToken(token);
+        final PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByResetToken(token).orElseThrow(() -> new RuntimeException("Invalid reset token"));
         return !isTokenFound(passwordResetToken) ? "invalidToken"
                 : isTokenExpired(passwordResetToken) ? "expired"
                 : null;

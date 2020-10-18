@@ -25,7 +25,7 @@ public class ConfirmationToken {
     @Column(name="create_date")
     private Date createDate;
 
-    @OneToOne(targetEntity = User.class, fetch = FetchType.EAGER)
+    @OneToOne(targetEntity = User.class, fetch = FetchType.EAGER, cascade = CascadeType.REMOVE)
     @JoinColumn(nullable = false, name = "user_id")
     private User user;
 

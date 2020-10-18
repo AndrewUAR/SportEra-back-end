@@ -7,7 +7,7 @@ import javax.validation.constraints.NotNull;
 
 @Data
 @Entity
-@Table(name = "activity")
+@Table(name = "activities")
 public class Activity {
 
     @Id
@@ -18,5 +18,5 @@ public class Activity {
     @Enumerated(EnumType.STRING)
     @NotNull(message = "{sportera.constraints.activityName.NotNull.message}")
     @Column(length = 20)
-    private String name;
+    private EActivity name;
 }

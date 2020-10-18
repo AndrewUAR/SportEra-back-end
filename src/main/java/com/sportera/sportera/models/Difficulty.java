@@ -16,5 +16,5 @@ public class Difficulty {
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    private ERole name;
+    private EDifficulty name;
 }
