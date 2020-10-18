@@ -5,8 +5,10 @@ import com.sportera.sportera.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface PasswordTokenRepository extends JpaRepository<PasswordResetToken, Long> {
-    PasswordResetToken findByResetToken(String resetToken);
-    PasswordResetToken findByUser(User user);
+    Optional<PasswordResetToken> findByResetToken(String resetToken);
+    Optional<PasswordResetToken> findByUser(User user);
 }
