@@ -7,15 +7,11 @@ import com.sportera.sportera.payloads.request.LoginRequest;
 import com.sportera.sportera.payloads.request.PasswordResetRequest;
 import com.sportera.sportera.payloads.request.SignupRequest;
 import com.sportera.sportera.payloads.response.LoginResponse;
-import com.sportera.sportera.repositories.PasswordResetTokenRepository;
-import com.sportera.sportera.repositories.RoleRepository;
-import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.security.jwt.JwtUtils;
 import com.sportera.sportera.services.*;
 import com.sportera.sportera.shared.GenericResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -39,15 +35,8 @@ public class  AuthController {
     UserService userService;
 
     @Autowired
-    UserRepository userRepository;
-
-    @Autowired
-    RoleRepository roleRepository;
-
-    @Autowired
     ConfirmationTokenService confirmationTokenService;
-
-
+    
     @Autowired
     EmailSenderService emailSenderService;
 
@@ -56,9 +45,6 @@ public class  AuthController {
 
     @Autowired
     AuthenticationManager authenticationManager;
-
-    @Autowired
-    PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Autowired
     PasswordResetTokenService passwordResetTokenService;
@@ -71,7 +57,7 @@ public class  AuthController {
     ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
         User savedUser = userService.registerUser(signupRequest);
         ConfirmationToken token = confirmationTokenService.save(savedUser);
-        emailSenderService.constructConfirmationTokenEmail(token.getConfirmationToken(), savedUser);
+        emailSenderService.constructSendConfirmationTokenEmail(token.getConfirmationToken(), savedUser);
 
         return ResponseEntity.ok(new GenericResponse("Verification email was sent."));
     }
@@ -113,12 +99,9 @@ public class  AuthController {
 
     @PostMapping("/forgot-password")
     ResponseEntity<?> forgotPassword(@RequestParam("email") String userEmail) {
-        User user = userRepository.findByEmailIgnoreCase(userEmail).orElseThrow(() -> new UsernameNotFoundException("User with this email doesn't exist!"));
-        PasswordResetToken passwordResetToken = new PasswordResetToken(user);
-        passwordResetTokenService.save(passwordResetToken);
-        SimpleMailMessage resetPasswordTokenMessage = emailSenderService
-                .constructResetTokenEmail(passwordResetToken.getResetToken(), user);
-        emailSenderService.sendEmail(resetPasswordTokenMessage);
+        User user = userService.findUserByEmail(userEmail);
+        PasswordResetToken passwordResetToken = passwordResetTokenService.save(user);
+        emailSenderService.constructSendResetTokenEmail(passwordResetToken.getResetToken(), user);
         return ResponseEntity.ok(new GenericResponse("Reset link was sent to your email!"));
     }
 
@@ -128,13 +111,13 @@ public class  AuthController {
         if (result != null) {
             return ResponseEntity.ok(new GenericResponse("Reset token " + result));
         }
-        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByResetToken(token).orElseThrow(() -> new RuntimeException("Invalid reset token"));
+        PasswordResetToken passwordResetToken = passwordResetTokenService.findByResetToken(token);
         User user = passwordResetToken.getUser();
         if (user == null) {
             throw new UsernameNotFoundException("User was not found!");
         }
         userService.changeUserPassword(user, passwordResetRequest.getNewPassword());
-        passwordResetTokenService.delete(passwordResetToken);
+        passwordResetTokenService.delete(passwordResetToken.getId());
         return ResponseEntity.ok(new GenericResponse("Password was successfully changed!"));
     }
 
