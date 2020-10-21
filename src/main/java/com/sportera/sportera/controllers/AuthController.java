@@ -1,7 +1,8 @@
 package com.sportera.sportera.controllers;
 
-import com.sportera.sportera.errors.ApiError;
-import com.sportera.sportera.models.*;
+import com.sportera.sportera.models.ConfirmationToken;
+import com.sportera.sportera.models.PasswordResetToken;
+import com.sportera.sportera.models.User;
 import com.sportera.sportera.payloads.request.LoginRequest;
 import com.sportera.sportera.payloads.request.PasswordResetRequest;
 import com.sportera.sportera.payloads.request.SignupRequest;
@@ -14,7 +15,6 @@ import com.sportera.sportera.security.jwt.JwtUtils;
 import com.sportera.sportera.services.*;
 import com.sportera.sportera.shared.GenericResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,16 +23,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
-import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 
@@ -75,25 +71,13 @@ public class  AuthController {
 
 
     @PostMapping("/signup")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
-        User user = new User();
-        user.setUsername(signupRequest.getUsername());
-        user.setEmail(signupRequest.getEmail());
-        user.setPassword(signupRequest.getPassword());
-        Set<Role> roles = new HashSet<>();
-        Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-        roles.add(userRole);
-        user.setRoles(roles);
-        User savedUser = userService.save(user);
-        ConfirmationToken confirmationToken = new ConfirmationToken(savedUser);
-        confirmationTokenService.save(confirmationToken);
-        SimpleMailMessage confirmationTokenMessage = emailSenderService
-                .constructConfirmationTokenEmail(confirmationToken.getConfirmationToken(), savedUser);
-        emailSenderService.sendEmail(confirmationTokenMessage);
+    ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
+        User savedUser = userService.registerUser(signupRequest);
+        ConfirmationToken token = confirmationTokenService.save(savedUser);
+        emailSenderService.constructConfirmationTokenEmail(token.getConfirmationToken(), savedUser);
+
         return ResponseEntity.ok(new GenericResponse("User saved"));
     }
-
 
     @PostMapping("/signin")
     ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
@@ -120,7 +104,6 @@ public class  AuthController {
         return ResponseEntity.ok(res);
     }
 
-
     @RequestMapping(value="/confirm-account", method={RequestMethod.GET, RequestMethod.POST})
     ResponseEntity<?> confirmUserAccount(@RequestParam("token") String confirmationToken) {
         ConfirmationToken token = confirmationTokenRepository.findByConfirmationToken(confirmationToken).orElseThrow(() -> new RuntimeException("Invalid link"));
@@ -130,7 +113,6 @@ public class  AuthController {
         confirmationTokenService.delete(token);
         return ResponseEntity.ok(new GenericResponse("Account was successfully activated!"));
     }
-
 
     @PostMapping("/forgot-password")
     ResponseEntity<?> forgotPassword(@RequestParam("email") String userEmail) {
@@ -158,22 +140,5 @@ public class  AuthController {
         passwordResetTokenService.delete(passwordResetToken);
         return ResponseEntity.ok(new GenericResponse("Password was successfully changed!"));
     }
-
-
-
-    @ExceptionHandler({MethodArgumentNotValidException.class})
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    ApiError handleValidationException(MethodArgumentNotValidException exception, HttpServletRequest request) {
-        System.out.println(exception.getMessage());
-        ApiError apiError = new ApiError(400, "Validation error", request.getServletPath());
-        BindingResult result = exception.getBindingResult();
-        Map<String, String> validationErrors = new HashMap<>();
-        for(FieldError fieldError: result.getFieldErrors()) {
-            validationErrors.put(fieldError.getField(), fieldError.getDefaultMessage());
-        }
-        apiError.setValidationErrors(validationErrors);
-        return apiError;
-    }
-
 
 }
