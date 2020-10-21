@@ -1,10 +1,8 @@
 package com.sportera.sportera.controllers;
 
-import com.sportera.sportera.models.Activity;
-import com.sportera.sportera.models.EActivity;
 import com.sportera.sportera.models.User;
 import com.sportera.sportera.models.UserProfile;
-import com.sportera.sportera.payloads.request.CreateUserProfileRequest;
+import com.sportera.sportera.payloads.request.UserProfileRequest;
 import com.sportera.sportera.payloads.response.UserProfileResponse;
 import com.sportera.sportera.repositories.ActivityRepository;
 import com.sportera.sportera.repositories.UserProfileRepository;
@@ -12,17 +10,18 @@ import com.sportera.sportera.repositories.UserRepository;
 import com.sportera.sportera.services.UserDetailsImpl;
 import com.sportera.sportera.services.UserProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashSet;
+import javax.validation.Valid;
 import java.util.List;
-import java.util.Set;
 
 @RestController
-@RequestMapping("/api/1.0/user-profiles")
+@RequestMapping("/api/1.0")
 public class UserProfileController {
 
     @Autowired
@@ -37,64 +36,37 @@ public class UserProfileController {
     @Autowired
     UserProfileRepository userProfileRepository;
 
-    @GetMapping("/me")
-    ResponseEntity<?> getUserProfile(Authentication authentication) {
-        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
-        User user = userRepository.findByUsername(userPrincipal.getUsername()).orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        UserProfile userProfile = userProfileRepository.findByUser(user).orElseThrow(() -> new RuntimeException("User profile is not found"));
-        List<String> userActivities = userProfileService.getActivitiesToStringList(userProfile);
+    @GetMapping("/user-profiles")
+    @PreAuthorize("hasRole('ADMIN')")
+    ResponseEntity<?> getUserProfiles() {
+        List<UserProfileResponse> userProfiles = userProfileService.getUserProfiles();
+        if (!userProfiles.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        return ResponseEntity.ok(userProfiles);
+    }
 
-        UserProfileResponse response = new UserProfileResponse(
-                userProfile.getFirstName(),
-                userProfile.getLastName(),
-                userProfileService.calculateUserAge(userProfile.getDateOfBirth()),
-                userProfile.getIntroduction(),
-                userProfile.getProfilePicture(),
-                userActivities);
+    @GetMapping("/user-profiles/{id}")
+    ResponseEntity<?> getUserProfile(@PathVariable("id") Long id) {
+        UserProfileResponse response = userProfileService.getUserProfile(id);
         return ResponseEntity.ok(response);
     }
 
-
-    @PostMapping
-    ResponseEntity<?> createUserProfile(@RequestBody CreateUserProfileRequest createUserProfileRequest, Authentication authentication) {
-
-        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
-
-        User user = userRepository.findByUsername(userPrincipal.getUsername())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        UserProfile userProfile = new UserProfile();
-        userProfile.setUser(user);
-        userProfile.setFirstName(createUserProfileRequest.getFirstName());
-        userProfile.setLastName(createUserProfileRequest.getLastName());
-        userProfile.setDateOfBirth(createUserProfileRequest.getDateOfBirth());
-        userProfile.setProfilePicture(createUserProfileRequest.getProfilePicture());
-        userProfile.setIntroduction(createUserProfileRequest.getIntroduction());
-        Set<String> strActivities = createUserProfileRequest.getActivities();
-
-        Set<Activity> activities = new HashSet<>();
-
-        for (String strActivity : strActivities) {
-            try {
-                EActivity eActivity = EActivity.valueOf(strActivity.toUpperCase());
-                activityRepository.findByName(eActivity).ifPresent(activities::add);
-            } catch(IllegalArgumentException ignored) {}
-        }
-
-        userProfile.setActivities(activities);
-        UserProfile userProfileSaved = userProfileService.save(userProfile);
-
-        List<String> userActivities = userProfileService.getActivitiesToStringList(userProfileSaved);
-
-        UserProfileResponse response = new UserProfileResponse(
-                userProfileSaved.getFirstName(),
-                userProfileSaved.getLastName(),
-                userProfileService.calculateUserAge(userProfileSaved.getDateOfBirth()),
-                userProfileSaved.getIntroduction(),
-                userProfileSaved.getProfilePicture(),
-                userActivities);
-
+    @GetMapping("/user-profiles/me")
+    ResponseEntity<?> getMyProfile(Authentication authentication) {
+        UserProfileResponse response = userProfileService.getMyProfile(authentication);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/user-profiles")
+    ResponseEntity<?> createUserProfile(@Valid @RequestBody UserProfileRequest userProfileRequest, Authentication authentication) {
+        UserProfileResponse response = userProfileService.save(userProfileRequest, authentication);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/user-profiles/me")
+    ResponseEntity<?> updateMyProfile(@Valid @RequestBody UserProfileRequest userProfileRequest, Authentication authentication) {
+       
     }
 
 }
