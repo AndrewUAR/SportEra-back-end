@@ -15,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +22,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
-import java.util.List;
-import java.util.stream.Collectors;
 
 
 @RestController
@@ -36,7 +33,7 @@ public class  AuthController {
 
     @Autowired
     ConfirmationTokenService confirmationTokenService;
-    
+
     @Autowired
     EmailSenderService emailSenderService;
 
@@ -70,13 +67,7 @@ public class  AuthController {
         String jwt = jwtUtils.generateJwtToken(authentication);
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
-        LoginResponse res = new LoginResponse(
-                userDetails.getUsername(),
-                userDetails.getEmail(),
-                roles);
+        LoginResponse res = LoginResponse.build(userDetails);
 
         Cookie cookie = new Cookie("jwt", jwt);
         cookie.setMaxAge(7 * 24 * 60 * 60);
