@@ -7,7 +7,6 @@ import com.sportera.sportera.payloads.request.LoginRequest;
 import com.sportera.sportera.payloads.request.PasswordResetRequest;
 import com.sportera.sportera.payloads.request.SignupRequest;
 import com.sportera.sportera.payloads.response.LoginResponse;
-import com.sportera.sportera.repositories.ConfirmationTokenRepository;
 import com.sportera.sportera.repositories.PasswordResetTokenRepository;
 import com.sportera.sportera.repositories.RoleRepository;
 import com.sportera.sportera.repositories.UserRepository;
@@ -46,10 +45,8 @@ public class  AuthController {
     RoleRepository roleRepository;
 
     @Autowired
-    ConfirmationTokenRepository confirmationTokenRepository;
-
-    @Autowired
     ConfirmationTokenService confirmationTokenService;
+
 
     @Autowired
     EmailSenderService emailSenderService;
@@ -76,7 +73,7 @@ public class  AuthController {
         ConfirmationToken token = confirmationTokenService.save(savedUser);
         emailSenderService.constructConfirmationTokenEmail(token.getConfirmationToken(), savedUser);
 
-        return ResponseEntity.ok(new GenericResponse("User saved"));
+        return ResponseEntity.ok(new GenericResponse("Verification email was sent."));
     }
 
     @PostMapping("/signin")
@@ -106,11 +103,11 @@ public class  AuthController {
 
     @RequestMapping(value="/confirm-account", method={RequestMethod.GET, RequestMethod.POST})
     ResponseEntity<?> confirmUserAccount(@RequestParam("token") String confirmationToken) {
-        ConfirmationToken token = confirmationTokenRepository.findByConfirmationToken(confirmationToken).orElseThrow(() -> new RuntimeException("Invalid link"));
-        User user = userRepository.findByEmailIgnoreCase(token.getUser().getEmail()).orElseThrow(() -> new RuntimeException("User doesn't exist"));
+        ConfirmationToken token = confirmationTokenService.findByConfirmationToken(confirmationToken);
+        User user = userService.findUserByEmail(token.getUser().getEmail());
         user.setActive(true);
-        userRepository.save(user);
-        confirmationTokenService.delete(token);
+        userService.save(user);
+        confirmationTokenService.delete(token.getId());
         return ResponseEntity.ok(new GenericResponse("Account was successfully activated!"));
     }
 
